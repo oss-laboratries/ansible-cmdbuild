@@ -18,6 +18,7 @@ Target system:
 Login as root to the Target system
 Basic configurations can be edited in "hosts" file.
 This playbook does NOT include Alfresco/GIS/BIM/Liferay installation.
+Tested on CentOS 6.7 and 7.2
 
 Usage:
 1. Copy all files to Ansible executable directory
@@ -26,7 +27,7 @@ Usage:
 '''
 # ansible-playbook -i hosts site.yml --ask-pass 
 '''
-4. Playbokk is Installing;
+4. Playbook is Installing;
 - Oracle JDK 1.8
 - Postgres 9.4
 - Tomcat 8
@@ -50,6 +51,9 @@ Password: postgres
 Login user: admin
 Login password: admin
 8. You need further setup for CMDBuild/Shark. Please refer CMDBuild Technical Maunual.
+WEB UI: Administration Module > Setup > Workflow Engne
+Username: shark
+Password: shark
 9. if you have something wrong, 
 check /opt/tomcat/logs/catalina.out, cmdbuild.log, shark.log
 then restart tomcat.
