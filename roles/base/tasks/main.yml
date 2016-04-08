@@ -1,0 +1,71 @@
+- name: libselinux-pythonのインストール
+  become: yes
+  yum: name=libselinux-python  state=present
+  ignore_errors: True
+
+- name: 起動時にSELinux無効化(/etc/sysconfig/selinux)
+  become: yes
+  selinux: state=disabled
+
+- name: SELinux無効化(setenforce)
+  become: yes
+  command: setenforce 0
+
+- name: iptablesの停止(Centos/RHEL 6)
+  become: yes
+  service: name=iptables state=stopped enabled=no
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+   
+- name: firewalldの停止(Centos/RHEL 7)
+  become: yes
+  service: name=firewalld state=stopped enabled=no
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+- name: パッケージのインストール(Centos/RHEL 6)
+  become: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - '@Base'
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+ 
+- name: パッケージのインストール(Centos/RHEL 7)
+  become: yes
+  yum: name={{ item }} state=present
+  with_items:
+    - '@Minimal Install'
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+- name: ロケールの設定 (Centos/RHEL 6)
+  lineinfile: >
+    dest=/etc/sysconfig/i18n
+    regexp='^LANG='
+    line='LANG="{{locale}}"'
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+
+- name: ロケールの設定 (Centos/RHEL 7)
+  lineinfile: >
+    dest=/etc/locale.conf
+    regexp='^LANG='
+    line='LANG="{{locale}}"'
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+- shell: source /etc/locale.conf
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+- name: タイムゾーンの設定 (Centos/RHEL 6)
+  lineinfile: >
+    dest=/etc/sysconfig/clock
+    regexp='^ZONE='
+    line='ZONE="{{zone}}"'
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+
+- name: タイムゾーンの設定 (Centos/RHEL 7)
+  command: timedatectl set-timezone {{zone}}
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+  
+- name: ローカルタイムの設定
+  file: >
+    src={{zoneinfo_path}}
+    dest=/etc/localtime
+    state=link
+    force=yes
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"

@@ -1,0 +1,47 @@
+- name: Postgres存在確認
+  file: path=/usr/pgsql-9.4/bin/postgres
+  register: result_postgres
+  ignore_errors: True
+
+- block:
+  - name: Postgresリポジトリインストール - Centos/RHEL 6
+    yum: name={{ postgre_repo_v6 }} state=present
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+    ignore_errors: True
+  
+  - name: Postgresリポジトリインストール - Centos/RHEL 7
+    yum: name={{ postgre_repo_v7 }} state=present
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+    ignore_errors: True
+  
+  - name: Postgresインストール
+    yum: name={{ item }} state=present
+    with_items:
+      - postgresql94
+      - postgresql94-server
+      - postgresql94-devel
+#      - python-psycopg2
+#      - postgresql-contrib
+#      - libselinux-python
+
+  - name: Postgres初期化 initdb
+    shell: "/usr/pgsql-9.4/bin/initdb --encoding=UTF-8 --no-locale -D /var/lib/pgsql/9.4/data/"
+    become: yes
+    become_user: postgres
+    ignore_errors: True
+
+  - name: Postgres設定 postgresql.conf
+    replace: dest=/var/lib/pgsql/9.4/data/postgresql.conf regexp="{{ item.regexp }}" replace="{{ item.replace }}"
+    with_items:
+      - regexp: "^#listen_addresses = 'localhost'"
+        replace: "listen_addresses = '*'"
+
+  - name: Postgres設定 pg_hba.conf
+    lineinfile: >
+      dest=/var/lib/pgsql/9.4/data/pg_hba.conf
+      line='host    all             all             0.0.0.0/0               trust'
+
+  when: result_postgres|failed
+  
+- name: Postgres起動
+  service: name=postgresql-9.4 state=started enabled=yes

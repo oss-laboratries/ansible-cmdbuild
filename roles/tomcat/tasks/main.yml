@@ -1,0 +1,66 @@
+- name: OpenJDK削除
+  yum: name={{item}} state=absent
+  with_items:
+   - java-1.8.0-openjdk.x86_64
+   - java-1.8.0-openjdk-devel
+   - java-1.8.0-openjdk
+
+- name: OracleJDK 1.8ダウンロード
+  command: 'curl -s -L -o {{JAVA_DL_PATH}}  -b "oraclelicense=accept-securebackup-cookie" "{{JAVA_DL_URL}}"'
+
+- name: OracleJDK 1.8インストール
+  yum: name={{JAVA_DL_PATH}}
+
+# Install tomcat
+- name: Tomcat存在確認
+  file: path=/opt/tomcat
+  register: result_cat
+  ignore_errors: True
+
+- block:
+  - name: tomcatグループ作成
+    group: name=tomcat
+    become: yes
+
+  - name: tomcatユーザ作成
+    user: name=tomcat group=tomcat password=password
+    become: yes
+
+  - name: Tomcatダウンロード
+    unarchive: src={{ TOMCAT_DL_URL }} dest=/tmp copy=no
+
+  - name: Move tomcat dir
+    shell: mv /tmp/apache-tomcat-{{ TOMCAT_VER }} /opt/tomcat
+
+  - name: Replace config 
+    replace: dest=/opt/tomcat/conf/tomcat-users.xml regexp='{{ item.regexp }}' replace='{{ item.replace }}'
+    with_items:
+    - regexp: '^<tomcat-users>'
+      replace: ''
+    - regexp: '^</tomcat-users>'
+      replace: ''
+     
+  - name: Sed config
+    lineinfile: dest=/opt/tomcat/conf/tomcat-users.xml line='{{ item }}'
+    with_items:
+      - '<tomcat-users>'
+      - '  <role rolename="manager-script"/>'
+      - '  <user username="tomcat" password="password" roles="manager-script"/>'
+      - '</tomcat-users>'
+
+  - name: Change Owner
+    file: path=/opt/tomcat owner=tomcat group=tomcat recurse=yes
+
+  - name: Startup script copy
+    copy: src=roles/tomcat/files/tomcat dest=/etc/init.d/ mode=755
+
+  - name: setenv copy
+    copy: src=roles/tomcat/files/setenv.sh dest=/opt/tomcat/bin mode=755
+
+  - name: JDBCドライバのダウンロード
+    get_url: url={{ JDBC_URL }} dest=/opt/tomcat/lib/
+  
+  when: result_cat|failed
+
+- name: Restart Tomcat
+  service: name=tomcat state=restarted enabled=yes

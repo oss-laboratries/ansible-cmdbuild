@@ -1,0 +1,52 @@
+- name: unzipインストール
+  yum: name=unzip state=present
+
+- name: CMDBuild/Sharkダウンロード
+  unarchive: src={{ item }} dest=/tmp copy=no
+  with_items:
+    - "{{ CMDBUILD_URL }}"
+    - "{{ SHARK_URL }}"
+
+- name: CMDBuild/Sharkのインストール
+  copy: src={{ item.src }} dest={{ item.dest }} force=no remote_src=True
+  with_items:
+    - src: /tmp/cmdbuild-{{ CMDBUILD_VER }}/cmdbuild-{{ CMDBUILD_VER }}.war
+      dest: /opt/tomcat/webapps/cmdbuild.war
+    - src: /tmp/shark-cmdbuild-{{ CMDBUILD_VER }}/cmdbuild-shark-server-{{ CMDBUILD_VER }}.war
+      dest: /opt/tomcat/webapps/shark.war
+
+- wait_for: path=/opt/tomcat/webapps/shark/META-INF/context.xml
+
+- name: Shark設定 META-INF/context.xml
+  replace: >
+    dest=/opt/tomcat/webapps/shark/META-INF/context.xml
+    regexp='\${cmdbuild}'
+    replace='cmdbuild'   
+
+- wait_for: path=/opt/tomcat/webapps/cmdbuild/WEB-INF/conf/auth.conf
+
+- name: CMDBuild設定
+  lineinfile: >
+    dest=/opt/tomcat/webapps/cmdbuild/WEB-INF/conf/auth.conf
+    state=present
+    insertafter=EOF
+    line=serviceusers.privileged=workflow
+
+- name: Tomcat停止
+  service: name=tomcat state=stopped
+  ignore_errors: True
+
+- name: Tomcat停止確認
+  command: /usr/bin/pgrep -f tomcat
+  register: pid_result
+  ignore_errors: True
+
+- name: Tomcat強制停止
+  command: /usr/bin/pkill -KILL -f tomcat
+  ignore_errors: True
+  when: pid_result.rc == 0
+
+- name: Tomcat再起動
+  service: name=tomcat state=started
+  
+  

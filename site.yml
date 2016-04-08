@@ -1,0 +1,11 @@
+- hosts: cmdbuild
+  roles:
+    - base
+    - postgres
+    - tomcat
+    - cmdbuild
+
+  post_tasks:
+    - name: 完了メッセージ
+      debug:
+        msg='CMDBuildのインストールが完了しました。http://IPアドレス:8080/cmdbuild にアクセスしてください'
