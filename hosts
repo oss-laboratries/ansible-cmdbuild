@@ -29,3 +29,9 @@ SHARK_URL=https://sourceforge.net/projects/cmdbuild/files/2.4.0/shark-cmdbuild-2
 CONNECTOR_URL=https://sourceforge.net/projects/cmdbuild/files/2.4.0/basic-connector-1.5.0.zip
 REPORT_URL=https://sourceforge.net/projects/cmdbuild/files/2.4.0/additional-report-libs-1.5.zip
 PORTLET_URL=https://sourceforge.net/projects/cmdbuild/files/2.4.0/cmdbuild-portlet-1.6.1.war
+
+# Alfresco設定
+ALFRESCO_URL=http://dl.alfresco.com/release/community/201602-build-00005/alfresco-community-installer-201602-linux-x64.bin
+
+# OCS-inventory設定(MySQL rootパスワード)
+db_passwd_root=password

@@ -51,9 +51,19 @@
   - name: Change Owner
     file: path=/opt/tomcat owner=tomcat group=tomcat recurse=yes
 
-  - name: Startup script copy
+  - name: Startup script copy(Centos/RHEL 6)
     copy: src=roles/tomcat/files/tomcat dest=/etc/init.d/ mode=755
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
 
+  - block:
+    - name: Startup script copy(Centos/RHEL 7)
+      copy: src=roles/tomcat/files/tomcat.service dest=/usr/lib/systemd/system/ mode=755
+    
+    - name: Systemctl enable service(Centos/RHEL 7)
+      command: systemctl enable tomcat
+      
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+    
   - name: setenv copy
     copy: src=roles/tomcat/files/setenv.sh dest=/opt/tomcat/bin mode=755
 

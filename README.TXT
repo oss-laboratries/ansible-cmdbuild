@@ -1,5 +1,8 @@
 ANSIBLE-CMDBUILD
 2016/4/8
+2016/4/14 UPDATE
+- Add  Alfresco/OCS-inventory/CMDBuild-basic-connector installation
+
 AUTHOR: OSS Laboratories Inc.
 http://www.ossl.co.jp
 Copyright reserved.
@@ -17,7 +20,7 @@ Target system:
  8GB RAM and 100GB storage available are recommended
 Login as root to the Target system
 Basic configurations can be edited in "hosts" file.
-This playbook does NOT include Alfresco/GIS/BIM/Liferay installation.
+This playbook does NOT include GIS/BIM/Liferay installation.
 Tested on CentOS 6.7 and 7.2
 
 Usage:
@@ -33,6 +36,10 @@ Usage:
 - Tomcat 8
 - CMDBuild 2.4
 - CMDBuild Shark
+- Alfresco 5.1
+- OCS-inventory Server/Agent
+- CMDBuild Basic-connector
+
 5. After completed playbook, 
 Check Tomcat logs to find "Server startup in XXXXXX ms"
 '''
@@ -41,6 +48,7 @@ Check Tomcat logs to find "Server startup in XXXXXX ms"
 6. Access from your browser;
 http://TARGET IP:8080/cmdbuild
 to start GUI installation for CMDBuild.
+
 7. On GUI setup,
 CMDBuild database name: cmdbuild
 Create Shark schima: yes
@@ -50,10 +58,12 @@ Postgres user: postgres
 Password: postgres
 Login user: admin
 Login password: admin
+
 8. You need further setup for CMDBuild/Shark. Please refer CMDBuild Technical Maunual.
 WEB UI: Administration Module > Setup > Workflow Engne
 Username: shark
 Password: shark
+
 9. if you have something wrong, 
 check /opt/tomcat/logs/catalina.out, cmdbuild.log, shark.log
 then restart tomcat.
@@ -61,5 +71,9 @@ then restart tomcat.
 # pkill -9 -f tomcat
 # service tomcat start
 '''
+
+10. You need further setup for Alfresco/OCS-inventory/CMDBuild-basic-connector.
+    Please refer CMDBuild Technical Maunual.
+
 Enjoy CMDBuild!
 

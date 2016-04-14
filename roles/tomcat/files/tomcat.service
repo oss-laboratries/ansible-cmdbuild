@@ -1,0 +1,13 @@
+[Unit]
+Description=Apache Tomcat
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/tomcat/bin/startup.sh
+ExecStop=/opt/tomcat/bin/shutdown.sh
+RemainAfterExit=yes
+User=root
+
+[Install]
+WantedBy=multi-user.target

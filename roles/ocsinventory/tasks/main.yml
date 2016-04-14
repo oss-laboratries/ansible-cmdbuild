@@ -1,0 +1,149 @@
+- name: OCS-inventory存在確認
+  shell: yum list installed|grep ocsinventory.noarch
+  register: result_ocs
+  ignore_errors: True
+
+- block:
+
+  - name: EPELレポジトリインストール
+    yum: name=epel-release state=present
+    
+  - name: OCS-inventoryインストール
+    yum: name={{ item }} state=present
+    with_items:
+      - ocsinventory
+      - ocsinventory-agent
+      - MySQL-python
+
+  - name: ipdiscoverインストール(Centos/RHEL 7)
+    yum: name=ocsinventory-ipdiscover state=present
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+  - name: MySQL設定(Centos/RHEL 6)
+    service: name=mysqld state=started enabled=yes
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+  
+  - name: MySQL設定(Centos/RHEL 7)
+    service: name=mariadb state=started enabled=yes
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+           
+  - name: 匿名ユーザー削除
+    mysql_user: login_user=root
+                login_password=''
+                name=''
+                host={{ item }}
+                state=absent
+    with_items:
+      - '{{ ansible_hostname }}'
+      - '127.0.0.1'
+      - '::1'
+      - 'localhost'
+    ignore_errors: True
+
+  - name: rootパスワード設定
+    mysql_user: login_user=root
+                login_password=''
+                name=root
+                password="{{ db_passwd_root }}"
+                priv=*.*:ALL,GRANT
+                host={{ item }}
+    with_items:
+      - '{{ ansible_hostname }}'
+      - '127.0.0.1'
+      - '::1'
+      - 'localhost'
+    ignore_errors: True
+
+  - name: DB削除
+    mysql_db: name=ocsweb login_user=root login_password="{{ db_passwd_root }}" state=absent
+    ignore_errors: True
+    
+  - name: DB作成
+    mysql_db: name=ocsweb login_user=root login_password="{{ db_passwd_root }}" state=present
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+  - name: DBインポート(Centos/RHEL 7)
+    mysql_db: name=ocsweb login_user=root login_password="{{ db_passwd_root }}" state=import target=/usr/share/ocsinventory-reports/ocsreports/files/ocsbase_new.sql
+    ignore_errors: True
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+  - name: DBインポート(Centos/RHEL 6)
+    mysql_db: name=ocsweb login_user=root login_password="{{ db_passwd_root }}" state=import target=/usr/share/ocsinventory-reports/ocsreports/files/ocsbase.sql
+    ignore_errors: True
+    when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '6'"
+    
+  - name: 設定を修正 ocsinventory-server.conf
+    lineinfile: >
+      dest=/etc/httpd/conf.d/ocsinventory-server.conf
+      regexp='{{ item.regexp }}'
+      line='{{ item.line }}'
+    with_items:
+      - regexp: 'OCS_DB_HOST'
+        line: '  PerlSetEnv OCS_DB_HOST localhost'
+      - regexp: 'OCS_DB_PORT'
+        line: '  PerlSetEnv OCS_DB_PORT 3306'
+      - regexp: 'OCS_DB_USER'
+        line: '  PerlSetEnv OCS_DB_USER root'
+      - regexp: 'OCS_DB_PWD'
+        line: '  PerlSetVar OCS_DB_PWD {{ db_passwd_root }}'
+        
+  when: result_ocs.rc!=0
+  
+- name: Apache起動
+  service: name=httpd state=started enabled=yes
+
+- name: OCSinventoryエージェントの設定 ocsinventory-agent.cfg
+  lineinfile: >
+    dest=/etc/ocsinventory/ocsinventory-agent.cfg
+    regexp='{{ item.regexp }}'
+    line='{{ item.line }}'
+  with_items:
+    - regexp: '^# server'
+      line: 'server = http://localhost/ocsinventory'
+    - regexp: '^local'
+      line: '#local = /var/lib/ocsinventory-agent' 
+    
+- name: OCSinventoryエージェントの設定 ocsinventory-agent
+  lineinfile: >
+    dest=/etc/sysconfig/ocsinventory-agent
+    regexp='^OCSMODE'
+    line='OCSMODE[0]=cron'
+  
+- name: 依存モジュールインストール perl-LWP-Protocol-https
+  yum: name=perl-LWP-Protocol-https state=present
+  when: "ansible_os_family == 'RedHat' and ansible_distribution_major_version == '7'"
+
+- name:  OCSinventoryエージェントの起動
+  shell: /usr/sbin/ocsinventory-agent
+    
+- name: Basic-connector存在確認
+  file: path=/opt/basic-connector
+  register: result_connector
+  ignore_errors: True
+  
+- block:
+  - name: Basic-connectorダウンロード
+    unarchive: src="{{ CONNECTOR_URL }}" dest=/tmp copy=no 
+    ignore_errors: True
+
+  - name: CMDBuildのカタログviewを作成
+    mysql_db: name=ocsweb login_user=root login_password="{{ db_passwd_root }}" state=import target=/tmp/basic-connector-1.5.0/ocs-views.sql
+    ignore_errors: True
+   
+  - name: プログラムを配置
+    command: cp -R /tmp/basic-connector-1.5.0/basic-connector /opt/
+    
+  - file: path=/opt/basic-connector/bin/connector.sh mode=755
+ 
+  - name: Basic-connector設定 configuration.xml
+    replace: >
+     dest=/opt/basic-connector/conf/configuration.xml
+     regexp="{{ item.regexp }}"
+     replace="{{ item.replace }}"
+    with_items:
+     - regexp: "3307"
+       replace: "3306"
+     - regexp: "mypassword"
+       replace: "{{ db_passwd_root }}"
+       
+  when: result_connector|failed

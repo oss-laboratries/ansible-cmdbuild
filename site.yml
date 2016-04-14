@@ -4,6 +4,8 @@
     - postgres
     - tomcat
     - cmdbuild
+    - alfresco
+    - ocsinventory
 
   post_tasks:
     - name: 完了メッセージ

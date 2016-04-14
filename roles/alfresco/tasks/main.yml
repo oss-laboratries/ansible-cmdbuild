@@ -1,0 +1,39 @@
+- name: Alfresco存在確認
+  file: path=/opt/alfresco-community/
+  register: result_alfresco
+  ignore_errors: True
+
+- block:
+  - name: psycopg2インストール
+    yum: name=python-psycopg2 state=present
+    
+  - name: Alfresco DB削除
+    postgresql_db: name=alfresco state=absent
+    ignore_errors: True
+    
+  - name: ALfresco DB作成
+    postgresql_db: name=alfresco encoding='UTF-8' state=present
+
+  - name: Alfrescoダウンロード
+    get_url: url={{ALFRESCO_URL}} dest=/tmp mode=755 force=no 
+    ignore_errors: True
+    
+  - name: Alfrescoインストール
+    shell: "/tmp/alfresco-community-installer-201602-linux-x64.bin \
+--unattendedmodeui none --mode unattended \
+--enable-components libreofficecomponent,alfrescosolr,alfrescosolr4,aosmodule,alfrescowcmqs,alfrescogoogledocs \
+--disable-components javaalfresco,postgres \
+--installer-language ja \
+--jdbc_username postgres --jdbc_password postgres \
+--tomcat_server_port 10080 --tomcat_server_shutdown_port 10005 \
+--tomcat_server_ajp_port 10009 --alfresco_ftp_port 1121 \
+--alfresco_admin_password admin \
+--alfrescocustomstack_services_startup demand"
+  
+  - name: JDBCドライバのコピー
+    copy: src=/opt/tomcat/lib/postgresql-9.4.1208.jar dest=/opt/alfresco-community/tomcat/lib/ remote_src=True
+
+  when: result_alfresco|failed
+  
+- name: Alfresco起動
+  service: name=alfresco state=started enabled=yes
