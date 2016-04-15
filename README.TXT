@@ -71,8 +71,19 @@ then restart tomcat.
 # pkill -9 -f tomcat
 # service tomcat start
 '''
+10. To access Alfresco
+http://TARGET IP:10080/share
+Login user: admin
+Login password: admin
 
-10. You need further setup for Alfresco/OCS-inventory/CMDBuild-basic-connector.
+11. To access OCSinventory
+http://TARGET IP/oscreports
+Login user: admin
+Login password: admin
+MySQL user: root
+MySQL password: db_passwd_root in "hosts" file, default: password
+
+12. You need further setup for Alfresco/OCS-inventory/CMDBuild-basic-connector.
     Please refer CMDBuild Technical Maunual.
 
 Enjoy CMDBuild!
